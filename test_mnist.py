@@ -7,6 +7,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
 from Loss_ASoftmax import Loss_ASoftmax
+from Loss_Sphereface import sphereloss
+from Loss_Arcface import arcface_loss
 
 def visual_feature_space(features,labels, num_classes, name_dict = None):
     ''' https://raw.githubusercontent.com/ShownX/mxnet-center-loss/master/utils.py '''
@@ -59,7 +61,9 @@ class Module(object):
         I = tf.reshape(x, [-1, 28, 28, 1])
         feat = Network(I)
         dim = feat.get_shape()[-1]
-        logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
+        # logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
+        # logits, loss = sphereloss(inputs = feat, label = y_, classes = num_classes, m = 4)
+        logits, loss = arcface_loss(embedding = feat, labels = y_, out_num=num_classes, s=64., m=0.5)
         self.x_ = x
         self.y_ = y_
         self.y = tf.argmax(logits, 1)
