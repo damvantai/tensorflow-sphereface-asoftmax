@@ -8,9 +8,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
 from Loss_ASoftmax import Loss_ASoftmax
 from Loss_Sphereface import sphereloss
+from Loss_Sphereface import sphereloss_onehot
 from Loss_Arcface import arcface_loss
+from Loss_Arcface import arcface_loss_onehot
 
-def visual_feature_space(features,labels, num_classes, name_dict = None):
+
+def visual_feature_space(features, labels, num_classes, name_dict = None):
     ''' https://raw.githubusercontent.com/ShownX/mxnet-center-loss/master/utils.py '''
 
     if name_dict is None:
@@ -59,11 +62,16 @@ class Module(object):
         x = tf.placeholder(tf.float32, [batch_size, 784])
         y_ = tf.placeholder(tf.int64, [batch_size,])
         I = tf.reshape(x, [-1, 28, 28, 1])
+        print(I.shape)
         feat = Network(I)
         dim = feat.get_shape()[-1]
+        print(dim)
         # logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
-        # logits, loss = sphereloss(inputs = feat, label = y_, classes = num_classes, m = 4)
-        logits, loss = arcface_loss(embedding = feat, labels = y_, out_num=num_classes, s=64., m=0.5)
+        # logits, loss = sphereloss(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
+        # logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
+        # logits, loss = arcface_loss(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 32., m = 0.5)
+        logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 2, m = 0.5)
+
         self.x_ = x
         self.y_ = y_
         self.y = tf.argmax(logits, 1)
