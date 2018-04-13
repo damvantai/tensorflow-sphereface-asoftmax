@@ -9,7 +9,7 @@ import matplotlib.patheffects as PathEffects
 from Loss_ASoftmax import Loss_ASoftmax
 from Loss_Sphereface import sphereloss
 from Loss_Sphereface import sphereloss_onehot
-from Loss_Arcface import arcface_loss
+# from Loss_Arcface import arcface_loss
 from Loss_Arcface import arcface_loss_onehot
 
 
@@ -70,14 +70,14 @@ class Module(object):
         # logits, loss = sphereloss(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         # logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         # logits, loss = arcface_loss(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 32., m = 0.5)
-        logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 2, m = 0.5)
+        logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.0001, m = 0.00001)
 
         self.x_ = x
         self.y_ = y_
         self.y = tf.argmax(logits, 1)
         self.feat = feat
         self.loss = loss
-        self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y, self.y_), 'float'))
+        self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y, self.y_), 'float32'))
 
 batch_size = 256
 num_iters = 2000
@@ -117,6 +117,7 @@ for b in range(0, num, batch_size):
     test_labels[0:sz] = mnist.test.labels[b:e]
     acc_vec.append(sess.run(mod.accuracy, feed_dict={mod.x_: test_data, mod.y_: test_labels}))
 
+print (np.array(acc_vec))
 print ('Testing Accuracy: ', np.mean(np.array(acc_vec)))
 
 ### visualize results
