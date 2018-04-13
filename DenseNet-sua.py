@@ -289,7 +289,7 @@ class DenseNet:
             # [num_classes features]
             weight_unit = tf.nn.l2_normalize(weight, dim=1)
 
-            # [batch_size num_classes] cos(theta * m) = 
+            # [batch_size num_classes] cos(theta * m) = link google search: Large-Margin Softmax Loss for Convolutional Neural Networks.pdf 
             cos_theta = tf.matmul(x_inputs_unit, tf.transpose(weight_unit), name='cos_theta')
             cos_theta_square = tf.square(cos_theta)
             cos_theta_pow_4 = tf.pow(cos_theta, 4)
