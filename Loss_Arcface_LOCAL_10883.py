@@ -15,10 +15,6 @@ import math
 
 # 	cos_m = math.cos(m)
 # 	sin_m = math.sin(m)
-<<<<<<< HEAD
-=======
-# 	# mm = sin_m * m
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
 # 	mm = math.sin(math.pi - m) * m
 # 	threshold = math.cos(math.pi - m)
 
@@ -103,19 +99,14 @@ def arcface_loss_onehot(x_inputs, y_labels, num_classes, s=64., m=0.5, epsilon=1
 	mm = math.sin(math.pi - m ) * m
 	threshold = math.cos(math.pi - m)
 
-	with tf.variable_scope('arcface_loss_onehot'):
+	with tf.variable_scope('sphereface_loss_onehot'):
 		# [batch_size features]
 		x_inputs_shape = x_inputs.get_shape().as_list()
 
 		# [batch_size] X_norm
 		# x_input_norm = tf.sqrt(tf.reduce_sum(tf.square(x_inputs),axis=1) + epsilon)
 
-<<<<<<< HEAD
 		# [batch_size features] ||X||
-=======
-		# [batch_size features]
-		# x_inputs_unit = tf.multiply(s, tf.nn.l2_normalize(x_inputs, dim=1))
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
 		x_inputs_unit = tf.nn.l2_normalize(x_inputs, dim=1)
 		# ||X|| * s
 		x_inputs_unit_s = s * x_inputs_unit
@@ -126,65 +117,28 @@ def arcface_loss_onehot(x_inputs, y_labels, num_classes, s=64., m=0.5, epsilon=1
 		# [num_classes features] ||W||
 		weight_unit = tf.nn.l2_normalize(weight, dim=1)
 
-<<<<<<< HEAD
 		logit = tf.matmul(x_inputs_unit_s, tf.transpose(weight_unit))
 
 		# [batch_size num_classes]
 		# cos(theta + m) = cos(theta)*cos(m) - sin(theta)sin(m)
 		cos_theta = logit / s
-=======
-		# logit = tf.matmul(x_inputs_unit, tf.transpose(weight_unit))
-		# [batch_size num_classes]
-		cos_theta = tf.matmul(x_inputs_unit, tf.transpose(weight_unit), name='cos_theta') / s
-		# cos_theta = logit
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
 		cos_theta_square = tf.square(cos_theta)
 		sin_theta_square = tf.subtract(1., cos_theta_square)
 		sin_theta = tf.sqrt(sin_theta_square)
 		cos_theta_m = tf.subtract(tf.multiply(cos_theta, cos_m), tf.multiply(sin_theta, sin_m))
-<<<<<<< HEAD
 
 		# [batch_size num_classes] s * cos(theta + m)
 		logit_arcface = s * cos_theta_m
-=======
-		
-		# cos_theta_m =s * tf.subtract(tf.multiply(cos_theta, cos_m), tf.multiply(sin_theta, sin_m))
-		
-
-		# x_input_norm = tf.reshape(x_input_norm, (x_inputs_shape[0], 1))
-		# unit = tf.constant([[1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]])
-
-		# x_input_norm_reshape = tf.matmul(x_input_norm, unit)
-		# logit = tf.multiply(cos_theta, x_input_norm)
-		# logit = tf.multiply(cos_theta, x_input_norm_reshape)
-		logit = s * cos_theta
-
-
-
-		# [batch_size num_class] x [batch_size] = [batch_size num_class]
-		# logit_sphereface = tf.multiply(cos_m_theta, x_input_norm_reshape)
-		logit_arcface = tf.multiply(s, cos_theta_m)
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
 
 		# 
 		cond_v = cos_theta - threshold
-<<<<<<< HEAD
 		cond = tf.cast(tf.nn.relu(cond_v), dtype=tf.bool)
-=======
-		cond = tf.cast(tf.nn.relu(cond_v, name='if_else'), dtype=tf.bool)
-		# keep_val = s*(cos_theta - mm)
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
 		keep_val = logit - s*mm
 		
 		# if cond true logit_arcface else keep_val
 		logit_arcface = tf.where(cond, logit_arcface, keep_val)
-<<<<<<< HEAD
 		
 		# [batch_size num_classes] one hot of y_labels
-=======
-		# logit_arcface = tf.where(cond, cos_theta_m, keep_val)
-
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
 		mask = tf.one_hot(y_labels, depth=num_classes, name='one_hot_mask')
 
 		inv_mask = tf.subtract(1., mask, name='inverse_mask')

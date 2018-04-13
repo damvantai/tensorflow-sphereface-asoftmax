@@ -85,7 +85,7 @@ import tensorflow as tf
 # 	return logit_final, loss
 
 
-def sphereloss_onehot(x_inputs, y_labels, num_classes, fraction=1, scope='Logits', reuse=None, m=4, epsilon=1e-8):
+def sphereloss_onehot(x_inputs, y_labels, num_classes, m=4, epsilon=1e-8):
 	"""
 	x inputs tensor shape=[batch, features_num]
 	labels y tensor shape=[batch] each unit belong num_outputs
@@ -134,7 +134,7 @@ def sphereloss_onehot(x_inputs, y_labels, num_classes, fraction=1, scope='Logits
 		inv_mask = tf.subtract(1., mask, name='inverse_mask')
 
 		# [batch_size num_classes]
-		logit_final = tf.add(tf.multiply(logit, inv_mask), tf.multiply(logit_sphereface, mask), name='arcface_loss_output')
+		logit_final = tf.add(tf.multiply(logit, inv_mask), tf.multiply(logit_sphereface, mask), name='sphereface_loss_output')
 
 		loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_final, labels=y_labels))
 		# [batch_size num_classes]
