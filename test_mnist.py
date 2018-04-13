@@ -68,9 +68,9 @@ class Module(object):
         print(dim)
         # logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
         # logits, loss = sphereloss(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
-        # logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
+        logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         # logits, loss = arcface_loss(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 32., m = 0.5)
-        logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 2, m = 0.5)
+        # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.001, m = 0.005)
 
         self.x_ = x
         self.y_ = y_
