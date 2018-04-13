@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
 from Loss_ASoftmax import Loss_ASoftmax
-from Loss_Sphereface import sphereloss
+# from Loss_Sphereface import sphereloss
 from Loss_Sphereface import sphereloss_onehot
 # from Loss_Arcface import arcface_loss
 from Loss_Arcface import arcface_loss_onehot
@@ -70,11 +70,8 @@ class Module(object):
         # logits, loss = sphereloss(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         # logits, loss = arcface_loss(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 32., m = 0.5)
-<<<<<<< HEAD
         # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.001, m = 0.005)
-=======
-        logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.0001, m = 0.00001)
->>>>>>> 41103cb3be7d14539c4818261538345bc0a25127
+        # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.0001, m = 0.00001)
 
         self.x_ = x
         self.y_ = y_
