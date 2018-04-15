@@ -181,6 +181,7 @@ class DenseNet:
         output = self.avg_pool(output, 2, 2)
         return output
 
+    # SPHEREFACE LOSS IN LAST_TRANSITION_LAYER
     def last_transition_layer(self, x):
         in_filters = int(x.get_shape()[-1])
         # BN
@@ -195,15 +196,173 @@ class DenseNet:
         output = self.avg_pool(output, filter_size, filter_size)
 
         # Fully connected
+        # total_features = int(output.get_shape()[-1])
+        # output = tf.reshape(output, [-1, total_features])
+        # W = tf.get_variable('DW', [total_features, self.num_class], tf.float32,
+        #                     initializer=tf.contrib.layers.xavier_initializer())
+        # b = tf.get_variable('bias', [self.num_class], tf.float32, initializer=tf.constant_initializer(0.0))
+
+        # logits = tf.matmul(output, W) + b
+
+        # return output, logits, total_features
+
+
+
+        # SPHEREFACE LOSS
         total_features = int(output.get_shape()[-1])
-        output = tf.reshape(output, [-1, total_features])
-        W = tf.get_variable('DW', [total_features, self.num_class], tf.float32,
-                            initializer=tf.contrib.layers.xavier_initializer())
-        b = tf.get_variable('bias', [self.num_class], tf.float32, initializer=tf.constant_initializer(0.0))
+        output = self.reshape(output, [-1, total_features])
+        x_inputs = output
+        # batch_size = int(output.get_shape()[0])
+        num_classes = self.num_class
+        y_labels = self.label
 
-        logits = tf.matmul(output, W) + b
+        # [batch_size features]
+        x_inputs_shape = x_inputs.get_shape().as_list()
 
-        return output, logits, total_features
+        # [batch_size]
+        x_input_norm = tf.sqrt(tf.reduce_sum(tf.square(x_inputs),axis=1))
+
+        # [batch_size features]
+        x_inputs_unit = tf.nn.l2_normalize(x_inputs, dim=1)
+
+        # [num_classes features]
+        weight = tf.Variable(initial_value=tf.random_normal((num_classes, x_inputs_shape[1])) * tf.sqrt(2 / x_inputs_shape[1]), dtype=tf.float32, name='weight')
+
+        # [num_classes features]
+        weight_unit = tf.nn.l2_normalize(weight, dim=1)
+
+        # [batch_size num_classes] cos(theta * m) = link google search: Large-Margin Softmax Loss for Convolutional Neural Networks.pdf 
+        cos_theta = tf.matmul(x_inputs_unit, tf.transpose(weight_unit), name='cos_theta')
+        cos_theta_square = tf.square(cos_theta)
+        cos_theta_pow_4 = tf.pow(cos_theta, 4)
+        sign0 = tf.sign(cos_theta)
+        sign2 = tf.sign(2 * cos_theta_square - 1)
+        sign3 = tf.multiply(sign2, sign0)
+        sign4 = 2 * sign0 + sign3 - 3
+        cos_m_theta = sign3 * (8 * cos_theta_pow_4 - 8 * cos_theta_square + 1) + sign4
+
+        # [batch_size 1]
+        x_input_norm = tf.reshape(x_input_norm, (x_inputs_shape[0], 1))
+
+        # [1 num_classes]
+        unit = tf.constant([[1., 1., 1., 1., 1., 1., 1.]])
+
+        # [batch_size num_classes]
+        x_input_norm_reshape = tf.matmul(x_input_norm, unit)
+
+        # logit = tf.multiply(cos_theta, x_input_norm) [batch size num_classes] cos(theta) * ||x||
+        logit = tf.multiply(cos_theta, x_input_norm_reshape)
+
+        # [batch_size num_class] x [batch_size] = [batch_size num_class] cos(theta * m) * ||x||
+        logit_sphereface = tf.multiply(cos_m_theta, x_input_norm_reshape)
+
+        # [batch_size num_classes]
+        mask = tf.one_hot(y_labels, depth=num_classes, name='one_hot_mask')
+
+        inv_mask = tf.subtract(1., mask, name='inverse_mask')
+
+        # [batch_size num_classes]
+        logit_final = tf.add(tf.multiply(logit, inv_mask), tf.multiply(logit_sphereface, mask), name='sphereface_loss_onehot')
+        
+        # [batch_size num_classes]
+        # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_final, labels=y_labels))
+            
+        return x_inputs, logit_final, total_features
+
+
+    # ARCFACE LOSS IN LAST_TRANSITION_LAYER
+"""
+    def last_transition_layer(self, x):
+        in_filters = int(x.get_shape()[-1])
+        # BN
+        # output = self.batch_norm2(x, self.is_training)
+        output = self.batch_norm(x, in_filters, self.is_training)
+
+        # ReLU
+        output = tf.nn.relu(output)
+
+        # Avg pooling
+        filter_size = x.get_shape()[-2]
+        output = self.avg_pool(output, filter_size, filter_size)
+
+        # Fully connected
+        # total_features = int(output.get_shape()[-1])
+        # output = tf.reshape(output, [-1, total_features])
+        # W = tf.get_variable('DW', [total_features, self.num_class], tf.float32,
+        #                     initializer=tf.contrib.layers.xavier_initializer())
+        # b = tf.get_variable('bias', [self.num_class], tf.float32, initializer=tf.constant_initializer(0.0))
+
+        # logits = tf.matmul(output, W) + b
+
+        # return output, logits, total_features
+
+
+        # ARCFACE LOSS
+        total_features = int(output.get_shape()[-1])
+        output = self.reshape(output, [-1, total_features])
+        x_inputs = output
+        # batch_size = int(output.get_shape()[0])
+        num_classes = self.num_class
+        y_labels = self.label
+
+
+        cos_m = math.cos(m)
+        sin_m = math.sin(m)
+        mm = math.sin(math.pi - m ) * m
+        threshold = math.cos(math.pi - m)
+
+        # [batch_size features]
+        x_inputs_shape = x_inputs.get_shape().as_list()
+
+        # [batch_size] X_norm
+        # x_input_norm = tf.sqrt(tf.reduce_sum(tf.square(x_inputs),axis=1) + epsilon)
+
+        # [batch_size features] ||X||
+        x_inputs_unit = tf.nn.l2_normalize(x_inputs, dim=1)
+        # ||X|| * s
+        x_inputs_unit_s = s * x_inputs_unit
+
+        # [num_classes features] W
+        weight = tf.Variable(initial_value=tf.random_normal((num_classes, x_inputs_shape[1])) * tf.sqrt(2 / x_inputs_shape[1]), dtype=tf.float32, name='weight')
+
+        # [num_classes features] ||W||
+        weight_unit = tf.nn.l2_normalize(weight, dim=1)
+
+        logit = tf.matmul(x_inputs_unit_s, tf.transpose(weight_unit))
+
+        # [batch_size num_classes]
+        # cos(theta + m) = cos(theta)*cos(m) - sin(theta)sin(m)
+        cos_theta = logit / s
+        cos_theta_square = tf.square(cos_theta)
+        sin_theta_square = tf.subtract(1., cos_theta_square)
+        sin_theta = tf.sqrt(sin_theta_square)
+        cos_theta_m = tf.subtract(tf.multiply(cos_theta, cos_m), tf.multiply(sin_theta, sin_m))
+
+        # [batch_size num_classes] s * cos(theta + m)
+        logit_arcface = s * cos_theta_m
+
+        # 
+        cond_v = cos_theta - threshold
+        cond = tf.cast(tf.nn.relu(cond_v), dtype=tf.bool)
+        keep_val = logit - s*mm
+        
+        # if cond true logit_arcface else keep_val
+        logit_arcface = tf.where(cond, logit_arcface, keep_val)
+        
+        # [batch_size num_classes] one hot of y_labels
+        mask = tf.one_hot(y_labels, depth=num_classes, name='one_hot_mask')
+
+        inv_mask = tf.subtract(1., mask, name='inverse_mask')
+
+        # [batch_size num_classes]
+        logit_final = tf.add(tf.multiply(logit, inv_mask), tf.multiply(logit_arcface, mask), name='arcface_loss_output')
+
+        # loss
+        # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_final, labels=y_labels))
+
+        # return logit_final, loss
+        return x_inputs, logit_final, total_features
+"""
 
     def inference(self):
         self.layer_per_block = int((self.depth - self.total_blocks - 1) / self.total_blocks)
@@ -266,131 +425,6 @@ class DenseNet:
         matrix_sub = (slack - same * (thre - distance))
         return tf.reduce_sum(tf.nn.relu( matrix_sub))
 
-    # sphereface loss
-    def sphereloss(self, m=4):
-        
-        x_inputs = self.score
-        y_labels = self.label
-        num_classes = self.num_class
-
-        with tf.variable_scope('sphereface_loss_onehot'):
-            # [batch_size features]
-            x_inputs_shape = x_inputs.get_shape().as_list()
-
-            # [batch_size]
-            x_input_norm = tf.sqrt(tf.reduce_sum(tf.square(x_inputs),axis=1))
-
-            # [batch_size features]
-            x_inputs_unit = tf.nn.l2_normalize(x_inputs, dim=1)
-
-            # [num_classes features]
-            weight = tf.Variable(initial_value=tf.random_normal((num_classes, x_inputs_shape[1])) * tf.sqrt(2 / x_inputs_shape[1]), dtype=tf.float32, name='weight')
-
-            # [num_classes features]
-            weight_unit = tf.nn.l2_normalize(weight, dim=1)
-
-            # [batch_size num_classes] cos(theta * m) = link google search: Large-Margin Softmax Loss for Convolutional Neural Networks.pdf 
-            cos_theta = tf.matmul(x_inputs_unit, tf.transpose(weight_unit), name='cos_theta')
-            cos_theta_square = tf.square(cos_theta)
-            cos_theta_pow_4 = tf.pow(cos_theta, 4)
-            sign0 = tf.sign(cos_theta)
-            sign2 = tf.sign(2 * cos_theta_square - 1)
-            sign3 = tf.multiply(sign2, sign0)
-            sign4 = 2 * sign0 + sign3 - 3
-            cos_m_theta = sign3 * (8 * cos_theta_pow_4 - 8 * cos_theta_square + 1) + sign4
-
-            # [batch_size 1]
-            x_input_norm = tf.reshape(x_input_norm, (x_inputs_shape[0], 1))
-
-            # [1 num_classes]
-            unit = tf.constant([[1., 1., 1., 1., 1., 1., 1.]])
-
-            # [batch_size num_classes]
-            x_input_norm_reshape = tf.matmul(x_input_norm, unit)
-
-            # logit = tf.multiply(cos_theta, x_input_norm) [batch size num_classes] cos(theta) * ||x||
-            logit = tf.multiply(cos_theta, x_input_norm_reshape)
-
-            # [batch_size num_class] x [batch_size] = [batch_size num_class] cos(theta * m) * ||x||
-            logit_sphereface = tf.multiply(cos_m_theta, x_input_norm_reshape)
-
-            # [batch_size num_classes]
-            mask = tf.one_hot(y_labels, depth=num_classes, name='one_hot_mask')
-
-            inv_mask = tf.subtract(1., mask, name='inverse_mask')
-
-            # [batch_size num_classes]
-            logit_final = tf.add(tf.multiply(logit, inv_mask), tf.multiply(logit_sphereface, mask), name='arcface_loss_output')
-            
-            # [batch_size num_classes]
-            # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_final, labels=y_labels))
-            
-        return logit_final
-
-    # arcface loss
-    def arcface_loss_onehot(self, s=64., m=0.5):
-        x_inputs = self.score
-        y_labels = self.label
-        num_classes = self.num_class
-
-        cos_m = math.cos(m)
-        sin_m = math.sin(m)
-        mm = math.sin(math.pi - m ) * m
-        threshold = math.cos(math.pi - m)
-
-        with tf.variable_scope('sphereface_loss_onehot'):
-            # [batch_size features]
-            x_inputs_shape = x_inputs.get_shape().as_list()
-
-            # [batch_size] X_norm
-            # x_input_norm = tf.sqrt(tf.reduce_sum(tf.square(x_inputs),axis=1) + epsilon)
-
-            # [batch_size features] ||X||
-            x_inputs_unit = tf.nn.l2_normalize(x_inputs, dim=1)
-            # ||X|| * s
-            x_inputs_unit_s = s * x_inputs_unit
-
-            # [num_classes features] W
-            weight = tf.Variable(initial_value=tf.random_normal((num_classes, x_inputs_shape[1])) * tf.sqrt(2 / x_inputs_shape[1]), dtype=tf.float32, name='weight')
-
-            # [num_classes features] ||W||
-            weight_unit = tf.nn.l2_normalize(weight, dim=1)
-
-            logit = tf.matmul(x_inputs_unit_s, tf.transpose(weight_unit))
-
-            # [batch_size num_classes]
-            # cos(theta + m) = cos(theta)*cos(m) - sin(theta)sin(m)
-            cos_theta = logit / s
-            cos_theta_square = tf.square(cos_theta)
-            sin_theta_square = tf.subtract(1., cos_theta_square)
-            sin_theta = tf.sqrt(sin_theta_square)
-            cos_theta_m = tf.subtract(tf.multiply(cos_theta, cos_m), tf.multiply(sin_theta, sin_m))
-
-            # [batch_size num_classes] s * cos(theta + m)
-            logit_arcface = s * cos_theta_m
-
-            # 
-            cond_v = cos_theta - threshold
-            cond = tf.cast(tf.nn.relu(cond_v), dtype=tf.bool)
-            keep_val = logit - s*mm
-            
-            # if cond true logit_arcface else keep_val
-            logit_arcface = tf.where(cond, logit_arcface, keep_val)
-            
-            # [batch_size num_classes] one hot of y_labels
-            mask = tf.one_hot(y_labels, depth=num_classes, name='one_hot_mask')
-
-            inv_mask = tf.subtract(1., mask, name='inverse_mask')
-
-            # [batch_size num_classes]
-            logit_final = tf.add(tf.multiply(logit, inv_mask), tf.multiply(logit_arcface, mask), name='arcface_loss_output')
-
-            # loss
-            # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_final, labels=y_labels))
-
-        # return logit_final, loss
-        return logit_final
-
 
     def losses(self):
         self.centers = tf.get_variable('centers', [self.num_class, self.num_features], dtype=tf.float32,
@@ -408,11 +442,6 @@ class DenseNet:
         #
         # self.margins_batch = tf.gather(self.margins, self.label)
         self.margin_loss = 1e-4 * self.marginal_loss()
-
-        # sphereface loss
-        self.sphereface_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y_))
-        # arcface_loss
-        self.arcface_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y_))
 
         self.l2_loss = tf.add_n([tf.nn.l2_loss(var) for var in tf.trainable_variables()])
         self.cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y_))
