@@ -11,7 +11,8 @@ from Loss_ASoftmax import Loss_ASoftmax
 from Loss_Sphereface import sphereloss_onehot
 # from Loss_Arcface import arcface_loss
 from Loss_Arcface import arcface_loss_onehot
-
+from Loss_Cosface import cosface_loss_onehot
+import time
 
 def visual_feature_space(features, labels, num_classes, name_dict = None):
     ''' https://raw.githubusercontent.com/ShownX/mxnet-center-loss/master/utils.py '''
@@ -68,11 +69,11 @@ class Module(object):
         print(dim)
         # logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
         # logits, loss = sphereloss(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
-        logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
+        # logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         # logits, loss = arcface_loss(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 32., m = 0.5)
         # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.001, m = 0.005)
         # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.0001, m = 0.00001)
-
+        logits, loss = cosface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 8., m = 0.3)
         self.x_ = x
         self.y_ = y_
         self.y = tf.argmax(logits, 1)
@@ -80,11 +81,13 @@ class Module(object):
         self.loss = loss
         self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y, self.y_), 'float32'))
 
+start = time.time()
+
 batch_size = 256
 num_iters = 2000
 num_classes = 10
 
-mnist = input_data.read_data_sets('/tmp/MNIST', one_hot=False)
+mnist = input_data.read_data_sets('/home/damvantai/Documents/datasets/MNIST_data', one_hot=False)
 sess = tf.InteractiveSession()
 
 mod = Module(batch_size, num_classes)
@@ -128,4 +131,8 @@ sample_data = sample_data[:batch_size]
 test_data = mnist.test.images[sample_data,:]
 test_labels = mnist.test.labels[sample_data]
 feat_vec = sess.run(mod.feat, feed_dict={mod.x_: test_data})
+
+finish = time.time()
+print("time: ", (finish - start))
+
 visual_feature_space(feat_vec, test_labels, num_classes)

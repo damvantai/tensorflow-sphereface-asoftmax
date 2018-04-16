@@ -99,7 +99,7 @@ def arcface_loss_onehot(x_inputs, y_labels, num_classes, s=64., m=0.5, epsilon=1
 	mm = math.sin(math.pi - m ) * m
 	threshold = math.cos(math.pi - m)
 
-	with tf.variable_scope('sphereface_loss_onehot'):
+	with tf.variable_scope('arcface_loss_onehot'):
 		# [batch_size features]
 		x_inputs_shape = x_inputs.get_shape().as_list()
 
