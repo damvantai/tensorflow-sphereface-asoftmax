@@ -54,7 +54,7 @@ def Network(data_input, training = True):
     x = tflearn.conv_2d(x, 128, 3, strides = 1, activation='prelu', weights_init = 'xavier')
     x = tflearn.conv_2d(x, 128, 3, strides = 2, activation='prelu', weights_init = 'xavier')
     x = tflearn.flatten(x)
-    feat = tflearn.fully_connected(x, 2, weights_init = 'xavier')
+    feat = tflearn.fully_connected(x, 20, weights_init = 'xavier')
     return feat
 
 class Module(object):
@@ -70,10 +70,9 @@ class Module(object):
         # logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
         # logits, loss = sphereloss(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
         # logits, loss = sphereloss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, m = 4)
-        # logits, loss = arcface_loss(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 32., m = 0.5)
-        # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.001, m = 0.005)
+        logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 8, m = 0.1)
         # logits, loss = arcface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 1.0001, m = 0.00001)
-        logits, loss = cosface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 8., m = 0.3)
+        # logits, loss = cosface_loss_onehot(x_inputs = feat, y_labels = y_, num_classes = num_classes, s = 4., m = 0.2)
         self.x_ = x
         self.y_ = y_
         self.y = tf.argmax(logits, 1)

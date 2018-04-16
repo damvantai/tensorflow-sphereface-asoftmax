@@ -25,6 +25,7 @@ def arcface_loss_onehot(x_inputs, y_labels, num_classes, s=64., m=0.5, epsilon=1
 
 		# [batch_size features] ||X||
 		x_inputs_unit = tf.nn.l2_normalize(x_inputs, dim=1)
+		print("x inputs_unit shape = ", x_inputs_unit.get_shape().as_list())
 		# ||X|| * s
 		x_inputs_unit_s = s * x_inputs_unit
 
@@ -50,7 +51,8 @@ def arcface_loss_onehot(x_inputs, y_labels, num_classes, s=64., m=0.5, epsilon=1
 		# 
 		cond_v = cos_theta - threshold
 		cond = tf.cast(tf.nn.relu(cond_v), dtype=tf.bool)
-		keep_val = logit - s*mm
+		# keep_val = logit - s*mm
+		keep_val = s * (cos_theta - m)
 		
 		# if cond true logit_arcface else keep_val
 		logit_arcface = tf.where(cond, logit_arcface, keep_val)
